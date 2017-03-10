@@ -69,12 +69,10 @@ const unsigned char lampIcon24 [] PROGMEM = {
 #define BTN_LOGIN   D5
 #define BTN_LOGOUT  D6
 #define BTN_MODE    D7
+
 #define LED_LOGIN   A0
 #define LED_LOGOUT  A1
 #define LED_MODE    A2
-
-// Debounce Stuff
-#define T_TIMEOUT 100 // milliseconds
 
 ClickButton loginButton(BTN_LOGIN, LOW, CLICKBTN_PULLUP);
 ClickButton logoutButton(BTN_LOGOUT, LOW, CLICKBTN_PULLUP);
