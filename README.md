@@ -10,3 +10,5 @@ On the display, you can see following informations:
  * Current Time (hh:mm)
  * WIFI strength (as Image)
  * Outside Temperature (OpenWeather API)
+
+![alt tag](https://raw.githubusercontent.com/circlesmiler/iwork/master/iWork-fritzing.png)
