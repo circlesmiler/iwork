@@ -104,9 +104,9 @@ String dataStr;
 void onWorkHandler(const char *event, const char *data) {
     dataStr = String(data).trim().toLowerCase();
     if (dataStr.equals("entered")) {
-        setEnteredTime(Time.now());
+        login();
     } else if (dataStr.equals("exited")) {
-        setExitedTime(Time.now());
+        logout();
     }
 }
 
@@ -134,7 +134,7 @@ void setup()   {
     // init done
 
     display.display(); // show splashscreen
-    delay(1000);
+    delay(500);
     display.clearDisplay();   // clears the screen and buffer
 
     // Time.zone(+2);
@@ -158,42 +158,21 @@ void setup()   {
     pinMode(LED_LOGOUT, OUTPUT);
     pinMode(LED_MODE, OUTPUT);
 
-    setModeLED(true);
+    digitalWrite(LED_LOGIN, HIGH);
+    delay(200);
+    digitalWrite(LED_LOGIN, LOW);
+
+    digitalWrite(LED_LOGOUT, HIGH);
+    delay(200);
+    digitalWrite(LED_LOGOUT, LOW);
+
+    digitalWrite(LED_MODE, HIGH);
 }
 
 int page = 0;
 // PAINT STUFF IN LOOP
 void loop() {
-    // Update button state
-    loginButton.Update();
-    logoutButton.Update();
-    modeButton.Update();
-
-    // Save click codes in LEDfunction, as click codes are reset at next Update()
-    int function = 0;
-    if(modeButton.clicks != 0) function = modeButton.clicks;
-
-    if(function == 1) {
-        Serial.println("SINGLE click");
-        if (mode == 0) {
-            Serial.println("Change Page");
-            // Normaler Modus > Seite weiterschalten
-            page = (page + 1) % 4;
-        }
-    }
-    if(function == -1) {
-        Serial.println("SINGLE LONG click");
-        if (mode == 0) {
-            Serial.println("Edit Mode");
-            mode = 1;
-            blinkModeLEDtimer.start();
-        } else if (mode == 1) {
-            Serial.println("Normal Mode");
-            mode = 0;
-            blinkModeLEDtimer.stop();
-            setModeLED(true);
-        }
-    }
+    checkButtonState();
 
     // Load weather data
     if ((lastWeatherUpdate + WEATHER_UPDATE_INTERVAL) < Time.now()) {
@@ -205,8 +184,8 @@ void loop() {
 
     updateLoginLED();
     updateLogoutLED();
-    updateModeLED();
 
+    printPageNumber();
     if (page == 0) {
         printTime();
         printWifiState();
@@ -219,6 +198,71 @@ void loop() {
     display.display();
 }
 
+void checkButtonState() {
+  // Update button state
+  modeButton.Update();
+
+  performLoginButton();
+  performLogoutButton();
+  performModeButton();
+}
+
+void performLoginButton() {
+  loginButton.Update();
+  // Save click codes in LEDfunction, as click codes are reset at next Update()
+  int function = 0;
+  if(loginButton.clicks != 0) function = loginButton.clicks;
+
+  if(function == 1) {
+  Serial.println("Login button clicked.");
+    if (mode == 0) {
+      login();
+    }
+  }
+}
+
+void performLogoutButton() {
+  logoutButton.Update();
+  // Save click codes in LEDfunction, as click codes are reset at next Update()
+  int function = 0;
+  if(logoutButton.clicks != 0) function = logoutButton.clicks;
+
+  if(function == 1) {
+    Serial.println("Logout button clicked.");
+    if (mode == 0) {
+      logout();
+    }
+  }
+}
+
+void performModeButton() {
+  // Save click codes in LEDfunction, as click codes are reset at next Update()
+  int function = 0;
+  if(modeButton.clicks != 0) function = modeButton.clicks;
+
+  if(function == 1) {
+      Serial.println("SINGLE click");
+      if (mode == 0) {
+          Serial.println("Change Page");
+          // Normaler Modus > Seite weiterschalten
+          page = (page + 1) % 2;
+      }
+  }
+  if(function == -1) {
+      Serial.println("SINGLE LONG click");
+      if (mode == 0) {
+          Serial.println("Edit Mode");
+          mode = 1;
+          blinkModeLEDtimer.start();
+      } else if (mode == 1) {
+          Serial.println("Normal Mode");
+          mode = 0;
+          blinkModeLEDtimer.stop();
+          setModeLED(true);
+      }
+  }
+}
+
 void updateLoginLED() {
     digitalWrite(LED_LOGIN, enteredTime <= exitedTime);
 }
@@ -227,13 +271,13 @@ void updateLogoutLED() {
     digitalWrite(LED_LOGOUT, enteredTime > exitedTime);
 }
 
-void updateModeLED() {
+void printPageNumber() {
     display.setTextSize(1);
     display.setTextColor(WHITE);
     display.setTextWrap(false);
     display.setCursor(60,56);
 
-    display.print(page);
+    display.print(page + 1);
 }
 
 void printWorkStarted() {
@@ -383,6 +427,14 @@ int loadEEPROM(int address) {
     int tmpVal;
     EEPROM.get(address, tmpVal);
     return tmpVal;
+}
+
+void login() {
+  setEnteredTime(Time.now());
+}
+
+void logout() {
+  setExitedTime(Time.now());
 }
 
 void setEnteredTime(long timeInSeconds) {
