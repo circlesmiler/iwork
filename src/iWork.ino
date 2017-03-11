@@ -4,6 +4,8 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_SSD1306.h"
 
+#include <DataModel.h>
+
 //PIN PHOTON => PIN OLED
 #define OLED_MOSI   D0 //=>D1
 #define OLED_CLK    D1 //=>D0
@@ -61,10 +63,6 @@ const unsigned char lampIcon24 [] PROGMEM = {
 	0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-// Constants
-#define ENTER_ADDR 0
-#define EXIT_ADDR 4
-
 // PIN LED-Button Constants
 #define BTN_LOGIN   D5
 #define BTN_LOGOUT  D6
@@ -87,10 +85,7 @@ void blinkModeLED()
 Timer blinkModeLEDtimer(1000, blinkModeLED);
 
 // VARIABLES
-int enteredTime = 0;
-int exitedTime = 0;
-String enteredTimeStr;
-String exitedTimeStr;
+DataModel dataModel;
 
 #define WEATHER_UPDATE_INTERVAL 3600 // 3600sec = 1h
 #define Rostock_City_ID "2844588"
@@ -104,9 +99,9 @@ String dataStr;
 void onWorkHandler(const char *event, const char *data) {
     dataStr = String(data).trim().toLowerCase();
     if (dataStr.equals("entered")) {
-        login();
+        dataModel.login();
     } else if (dataStr.equals("exited")) {
-        logout();
+        dataModel.logout();
     }
 }
 
@@ -126,8 +121,8 @@ void setup()   {
     Serial.begin(9600);
 
     // Load data from EEPROM
-    setEnteredTime(loadEEPROM(ENTER_ADDR));
-    setExitedTime(loadEEPROM(EXIT_ADDR));
+    dataModel.login(loadEEPROM(ENTER_ADDR));
+    dataModel.logout(loadEEPROM(EXIT_ADDR));
 
     // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
     display.begin(SSD1306_SWITCHCAPVCC);
@@ -142,10 +137,6 @@ void setup()   {
 
     Particle.subscribe("on_work", onWorkHandler);
     Particle.subscribe("hook-response/weather/", receiveWeather, MY_DEVICES);
-
-    Particle.variable("enteredTime", enteredTimeStr);
-    Particle.variable("exitedTime", exitedTimeStr);
-    Particle.variable("eventStr", dataStr);
 
     // PIN MODES
     pinMode(BTN_MODE, INPUT_PULLUP);
@@ -218,7 +209,7 @@ void performLoginButton() {
   if(function == 1) {
   Serial.println("Login button clicked.");
     if (mode == 0) {
-      login();
+      dataModel.login();
     }
   }
 }
@@ -232,7 +223,7 @@ void performLogoutButton() {
   if(function == 1) {
     Serial.println("Logout button clicked.");
     if (mode == 0) {
-      logout();
+      dataModel.logout();
     }
   }
 }
@@ -266,11 +257,11 @@ void performModeButton() {
 }
 
 void updateLoginLED() {
-    digitalWrite(LED_LOGIN, enteredTime <= exitedTime);
+    digitalWrite(LED_LOGIN, dataModel.atWork());
 }
 
 void updateLogoutLED() {
-    digitalWrite(LED_LOGOUT, enteredTime > exitedTime);
+    digitalWrite(LED_LOGOUT, !dataModel.atWork());
 }
 
 void printPageNumber() {
@@ -302,15 +293,16 @@ void printWorkStarted() {
     display.setCursor(10,0);
 
     // Not initialized
-    if (enteredTime == 0 && exitedTime == 0) {
+    if (dataModel.getLoginTimeSec() == 0
+          && dataModel.getLogoutTimeSec() == 0) {
         display.print("--:--");
         return;
     }
 
-    if (enteredTime < exitedTime) {
+    if (!dataModel.atWork()) {
         display.print("--:--");
     } else {
-        display.print(Time.format(enteredTime, "%H:%M"));
+        display.print(Time.format(dataModel.getLoginTimeSec(), "%H:%M"));
     }
 }
 
@@ -364,22 +356,22 @@ void printWorkDuration() {
     display.setCursor(30,23);
 
     // Not initialized
-    if (enteredTime == 0 && exitedTime == 0) {
+    if (dataModel.getLoginTimeSec() == 0
+          && dataModel.getLogoutTimeSec() == 0) {
         display.print("--:--");
         return;
     }
 
-    if (enteredTime < exitedTime) {
+    if (!dataModel.atWork()) {
         display.print("--:--");
     } else {
-        int timeNow = Time.now();
-        int timeDiff = timeNow - enteredTime;
+        int timeDiff = dataModel.getAtWorkTimeSec();
         int minutes = timeDiff / 60;
 
         // Hours
         display.print(String::format("%02d", minutes / 60));
 
-        if (timeNow % 2 == 0) {
+        if (Time.now() % 2 == 0) {
             display.print(":");
         } else {
             display.print(" ");
@@ -399,10 +391,10 @@ void printExitTime() {
 
     display.setCursor(10, 56);
 
-    if (exitedTime == 0) {
+    if (dataModel.getLogoutTimeSec() == 0) {
         display.print("--:--");
     } else {
-        display.print(Time.format(exitedTime, "%H:%M"));
+        display.print(Time.format(dataModel.getLogoutTimeSec(), "%H:%M"));
     }
 }
 
@@ -439,28 +431,4 @@ int loadEEPROM(int address) {
     int tmpVal;
     EEPROM.get(address, tmpVal);
     return tmpVal;
-}
-
-void login() {
-  setEnteredTime(Time.now());
-}
-
-void logout() {
-  setExitedTime(Time.now());
-}
-
-void setEnteredTime(long timeInSeconds) {
-    if (timeInSeconds > 1483228800 && timeInSeconds < 4102444800) {
-        enteredTime = timeInSeconds;
-        EEPROM.put(ENTER_ADDR, enteredTime);
-    }
-    enteredTimeStr = Time.format(enteredTime, TIME_FORMAT_DEFAULT);
-}
-
-void setExitedTime(long timeInSeconds) {
-    if (timeInSeconds > 1483228800 && timeInSeconds < 4102444800) {
-        exitedTime = timeInSeconds;
-        EEPROM.put(EXIT_ADDR, exitedTime);
-    }
-    exitedTimeStr = Time.format(exitedTime, TIME_FORMAT_DEFAULT);
 }
