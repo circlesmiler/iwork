@@ -5,6 +5,7 @@
 #include <Adafruit_SSD1306.h>
 
 #include "DataModel.h"
+#include "WeatherModel.h"
 #include "Icons.h"
 
 //PIN PHOTON => PIN OLED
@@ -28,6 +29,11 @@ Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 #define LED_LOGOUT  A1
 #define LED_MODE    A2
 
+// EEPROM addresses
+#define ENTER_ADDR 0
+#define EXIT_ADDR 4
+#define OWM_CITY_ADDR 8
+
 ClickButton loginButton(BTN_LOGIN, LOW, CLICKBTN_PULLUP);
 ClickButton logoutButton(BTN_LOGOUT, LOW, CLICKBTN_PULLUP);
 ClickButton modeButton(BTN_MODE, LOW, CLICKBTN_PULLUP);
@@ -41,12 +47,11 @@ void blinkModeLED()
 Timer blinkModeLEDtimer(1000, blinkModeLED);
 
 // VARIABLES
-DataModel dataModel;
+DataModel dataModel = DataModel(ENTER_ADDR, EXIT_ADDR);
+WeatherModel weatherModel = WeatherModel(OWM_CITY_ADDR);
 
 #define WEATHER_UPDATE_INTERVAL 3600 // 3600sec = 1h
-#define Rostock_City_ID "2844588"
 int lastWeatherUpdate = 0;
-double tempHRO;
 
 // For debugging
 String dataStr;
@@ -61,10 +66,14 @@ void onWorkHandler(const char *event, const char *data) {
     }
 }
 
-// WEATHER HANDLER
 void receiveWeather(const char *event, const char *data) {
-    // Convert String to double
-    tempHRO = atof(data);
+  weatherModel.update(data);
+}
+
+int updateWeatherCityId(String data) {
+  weatherModel.setCityId(atoi(data));
+  Particle.publish("weather", String(weatherModel.getCityId()), PRIVATE);
+  return 0;
 }
 
 int mode = 0;
@@ -75,10 +84,6 @@ STARTUP(WiFi.selectAntenna(ANT_INTERNAL));
 // SETUP
 void setup()   {
     Serial.begin(9600);
-
-    // Load data from EEPROM
-    dataModel.login(loadEEPROM(ENTER_ADDR));
-    dataModel.logout(loadEEPROM(EXIT_ADDR));
 
     // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
     display.begin(SSD1306_SWITCHCAPVCC);
@@ -93,6 +98,7 @@ void setup()   {
 
     Particle.subscribe("on_work", onWorkHandler);
     Particle.subscribe("hook-response/weather/", receiveWeather, MY_DEVICES);
+    Particle.function("owmCityId", updateWeatherCityId);
 
     pinMode(LED_LOGIN, OUTPUT);
     pinMode(LED_LOGOUT, OUTPUT);
@@ -116,7 +122,7 @@ void loop() {
 
     // Load weather data
     if ((lastWeatherUpdate + WEATHER_UPDATE_INTERVAL) < Time.now()) {
-        Particle.publish("weather", Rostock_City_ID, PRIVATE);
+        Particle.publish("weather", String(weatherModel.getCityId()), PRIVATE);
         lastWeatherUpdate = Time.now();
     }
 
@@ -358,7 +364,7 @@ void printTemperature() {
         display.print("-.-");
     } else {
         // display.print(String::format("%+5.1f", tempHRO));
-        display.print(String::format("%+3.0f%cC", tempHRO, char(247)));
+        display.print(String::format("%+3d%cC", weatherModel.getCurrentTemp(), char(247)));
         //display.print(tempHRO);
     }
 }
@@ -372,10 +378,4 @@ void toggleModeLED() {
 
 void setModeLED(bool isOn) {
     digitalWrite(LED_MODE, isOn);
-}
-
-int loadEEPROM(int address) {
-    int tmpVal;
-    EEPROM.get(address, tmpVal);
-    return tmpVal;
 }

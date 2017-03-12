@@ -1,17 +1,12 @@
-// Constants
-#define ENTER_ADDR 0
-#define EXIT_ADDR 4
-
 class DataModel {
   public:
-    DataModel(int loginTimeSec = 0, int logoutTimeSec = 0);
+    // Uses the EEPROM addresses to restore login/logout data from memory
+    DataModel(int loginEEPROMAddress, int logoutEEPROMAddress);
 
     void login();
-    void login(int loginTimeSec);
     int getLoginTimeSec();
 
     void logout();
-    void logout(int logoutTimeSec);
     int getLogoutTimeSec();
 
     bool atWork();
@@ -20,4 +15,10 @@ class DataModel {
   private:
     int loginTimeSec_;
     int logoutTimeSec_;
+    int loginEEPROMAddress_;
+    int logoutEEPROMAddress_;
+
+    void login(int loginTimeSec);
+    void logout(int logoutTimeSec);
+    int loadEEPROM(int);
 };

@@ -2,9 +2,12 @@
 
 #include "DataModel.h"
 
-DataModel::DataModel(int loginTimeSec, int logoutTimeSec) {
-  login(loginTimeSec);
-  logout(logoutTimeSec);
+DataModel::DataModel(int loginEEPROMAddress, int logoutEEPROMAddress) {
+  loginEEPROMAddress_ = loginEEPROMAddress;
+  logoutEEPROMAddress_ = logoutEEPROMAddress;
+
+  login(loadEEPROM(loginEEPROMAddress));
+  logout(loadEEPROM(logoutEEPROMAddress));
 }
 
 void DataModel::login() {
@@ -13,7 +16,7 @@ void DataModel::login() {
 void DataModel::login(int loginTimeSec) {
   if (loginTimeSec > 1483228800 && loginTimeSec < 4102444800) {
       loginTimeSec_ = loginTimeSec;
-      EEPROM.put(ENTER_ADDR, loginTimeSec_);
+      EEPROM.put(loginEEPROMAddress_, loginTimeSec_);
   }
 }
 int DataModel::getLoginTimeSec() {
@@ -26,7 +29,7 @@ void DataModel::logout() {
 void DataModel::logout(int logoutTimeSec) {
   if (logoutTimeSec > 1483228800 && logoutTimeSec < 4102444800) {
       logoutTimeSec_ = logoutTimeSec;
-      EEPROM.put(EXIT_ADDR, logoutTimeSec_);
+      EEPROM.put(logoutEEPROMAddress_, logoutTimeSec_);
   }
 }
 int DataModel::getLogoutTimeSec() {
@@ -39,4 +42,10 @@ bool DataModel::atWork() {
 
 int DataModel::getAtWorkTimeSec() {
   return Time.now() - loginTimeSec_;
+}
+
+int DataModel::loadEEPROM(int address) {
+    int tmpVal;
+    EEPROM.get(address, tmpVal);
+    return tmpVal;
 }
