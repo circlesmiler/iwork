@@ -138,13 +138,6 @@ void setup()   {
     Particle.subscribe("on_work", onWorkHandler);
     Particle.subscribe("hook-response/weather/", receiveWeather, MY_DEVICES);
 
-    // PIN MODES
-    pinMode(BTN_MODE, INPUT_PULLUP);
-    // Setup button timers (all in milliseconds / ms)
-    // (These are default if not set, but changeable for convenience)
-    modeButton.debounceTime   = 30;   // Debounce timer in ms
-    modeButton.longClickTime  = 1000; // time until "held-down clicks" register
-
     pinMode(LED_LOGIN, OUTPUT);
     pinMode(LED_LOGOUT, OUTPUT);
     pinMode(LED_MODE, OUTPUT);
@@ -192,9 +185,6 @@ void loop() {
 }
 
 void checkButtonState() {
-  // Update button state
-  modeButton.Update();
-
   performLoginButton();
   performLogoutButton();
   performModeButton();
@@ -229,6 +219,7 @@ void performLogoutButton() {
 }
 
 void performModeButton() {
+  modeButton.Update();
   // Save click codes in LEDfunction, as click codes are reset at next Update()
   int function = 0;
   if(modeButton.clicks != 0) function = modeButton.clicks;
@@ -257,11 +248,11 @@ void performModeButton() {
 }
 
 void updateLoginLED() {
-    digitalWrite(LED_LOGIN, dataModel.atWork());
+    digitalWrite(LED_LOGIN, !dataModel.atWork());
 }
 
 void updateLogoutLED() {
-    digitalWrite(LED_LOGOUT, !dataModel.atWork());
+    digitalWrite(LED_LOGOUT, dataModel.atWork());
 }
 
 void printPageNumber() {

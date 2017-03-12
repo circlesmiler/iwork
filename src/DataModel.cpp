@@ -33,7 +33,7 @@ int DataModel::getLogoutTimeSec() {
 }
 
 bool DataModel::atWork() {
-  return loginTimeSec_ <= logoutTimeSec_;
+  return loginTimeSec_ > logoutTimeSec_;
 }
 
 int DataModel::getAtWorkTimeSec() {
