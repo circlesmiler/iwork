@@ -1,5 +1,6 @@
+#include <Particle.h>
+
 #include "DataModel.h"
-#include "Particle.h"
 
 DataModel::DataModel(int loginTimeSec, int logoutTimeSec) {
   login(loginTimeSec);
