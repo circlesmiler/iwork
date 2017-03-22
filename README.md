@@ -16,6 +16,9 @@ On the display, you can see following informations:
 ## Login and Logout
 It's possible to login and logout due to
  * Pressing the login or logout button
+  * Publishes an Event _work_state_ with folling data:
+   * Start|||01.01.2017 07:00
+   * Ende|||01.01.2017 17:00
  * Using the IFTTT Location
   * Trigger: Mobile Phone Location (IFTTT app needed on the phone)
   * Action: Particle Publish Event
@@ -33,8 +36,15 @@ currently not logged in. The LED turns of, when the user pressed the
 *Login Button*. The *Logout Button* only glows RED, when the user is currently
 logged in. Very easy, isn't it? ;-)
 
+## Weather Configuration (City ID)
+The temperature shown on the display is provided by the OpenWeather API. To
+get the temperature value of your city, you can call the Particle function
+_owmCityId_ to set your city id.
+
+See also http://openweathermap.org/help/city_list.txt
+
 ## The Mode Button
-A click on the *Mode Button* changes the page on the display. A long click on
-the *Mode Button* changes to a *setup mode*. Currently the *setup mode* is
+A click on the **Mode Button** changes the page on the display. A long click on
+the **Mode Button** changes to a **setup mode**. Currently the **setup mode** is
 only a dummy function. The idea is to UNDO a wrong login or logout due to the
 IFTTT actions.
