@@ -88,6 +88,8 @@ STARTUP(WiFi.selectAntenna(ANT_INTERNAL));
 void setup()   {
     Serial.begin(9600);
 
+    // Rotate display 180° (because it's build in in the other direction)
+    display->setRotation(2);
     // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
     display->begin(SSD1306_SWITCHCAPVCC);
     // init done
