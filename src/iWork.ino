@@ -8,6 +8,7 @@
 #include "WeatherModel.h"
 #include "Icons.h"
 #include "PageOne.h"
+#include "PageTwo.h"
 
 //PIN PHOTON => PIN OLED
 #define OLED_MOSI   D0 //=>D1
@@ -52,6 +53,7 @@ DataModel* dataModel = new DataModel(ENTER_ADDR, EXIT_ADDR);
 WeatherModel* weatherModel = new WeatherModel(OWM_CITY_ADDR);
 
 PageOne* pageOne = new PageOne(display, dataModel, weatherModel);
+PageTwo* pageTwo = new PageTwo(display, dataModel, weatherModel);
 
 #define WEATHER_UPDATE_INTERVAL 3600 // 3600sec = 1h
 int lastWeatherUpdate = 0;
@@ -140,7 +142,7 @@ void loop() {
     if (page == 0) {
       pageOne->updateDisplay();
     } else if (page == 1) {
-      printPage2();
+      pageTwo->updateDisplay();
     }
 
     display->display();
@@ -224,16 +226,6 @@ void printPageNumber() {
     display->setCursor(60,56);
 
     display->print(page + 1);
-}
-
-void printPage2() {
-  display->setTextSize(2);
-  display->setTextColor(WHITE);
-  display->setTextWrap(true);
-  display->setCursor(0,10);
-
-  display->println(" COMING");
-  display->print("    SOON");
 }
 
 /*
