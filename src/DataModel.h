@@ -1,3 +1,6 @@
+#ifndef DATA_MODEL_H
+#define DATA_MODEL_H
+
 class DataModel {
   public:
     // Uses the EEPROM addresses to restore login/logout data from memory
@@ -22,3 +25,4 @@ class DataModel {
     void logout(int logoutTimeSec);
     int loadEEPROM(int);
 };
+#endif /* DATA_MODEL_H */

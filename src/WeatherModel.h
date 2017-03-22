@@ -1,4 +1,5 @@
-//#define Rostock_City_ID 2844588
+#ifndef WEATHER_MODEL_H
+#define WEATHER_MODEL_H
 
 class WeatherModel {
   public:
@@ -18,3 +19,4 @@ class WeatherModel {
 
     int loadCityIdFromEEPROM();
 };
+#endif /* WEATHER_MODEL_H */

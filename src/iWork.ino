@@ -7,6 +7,7 @@
 #include "DataModel.h"
 #include "WeatherModel.h"
 #include "Icons.h"
+#include "PageOne.h"
 
 //PIN PHOTON => PIN OLED
 #define OLED_MOSI   D0 //=>D1
@@ -14,7 +15,7 @@
 #define OLED_DC     D2 //=>DC
 #define OLED_CS     D3 //=>CS
 #define OLED_RESET  D4 //=>RST
-Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+Adafruit_SSD1306* display = new Adafruit_SSD1306(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
 #if (SSD1306_LCDHEIGHT != 64)
 #error("Height incorrect, please fix Adafruit_SSD1306.h!");
@@ -47,8 +48,10 @@ void blinkModeLED()
 Timer blinkModeLEDtimer(1000, blinkModeLED);
 
 // VARIABLES
-DataModel dataModel = DataModel(ENTER_ADDR, EXIT_ADDR);
-WeatherModel weatherModel = WeatherModel(OWM_CITY_ADDR);
+DataModel* dataModel = new DataModel(ENTER_ADDR, EXIT_ADDR);
+WeatherModel* weatherModel = new WeatherModel(OWM_CITY_ADDR);
+
+PageOne* pageOne = new PageOne(display, dataModel, weatherModel);
 
 #define WEATHER_UPDATE_INTERVAL 3600 // 3600sec = 1h
 int lastWeatherUpdate = 0;
@@ -60,19 +63,19 @@ String dataStr;
 void onWorkHandler(const char *event, const char *data) {
     dataStr = String(data).trim().toLowerCase();
     if (dataStr.equals("entered")) {
-        dataModel.login();
+        dataModel->login();
     } else if (dataStr.equals("exited")) {
-        dataModel.logout();
+        dataModel->logout();
     }
 }
 
 void receiveWeather(const char *event, const char *data) {
-  weatherModel.update(data);
+  weatherModel->update(data);
 }
 
 int updateWeatherCityId(String data) {
-  weatherModel.setCityId(atoi(data));
-  Particle.publish("weather", String(weatherModel.getCityId()), PRIVATE);
+  weatherModel->setCityId(atoi(data));
+  Particle.publish("weather", String(weatherModel->getCityId()), PRIVATE);
   return 0;
 }
 
@@ -86,12 +89,12 @@ void setup()   {
     Serial.begin(9600);
 
     // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
-    display.begin(SSD1306_SWITCHCAPVCC);
+    display->begin(SSD1306_SWITCHCAPVCC);
     // init done
 
-    display.display(); // show splashscreen
+    display->display(); // show splashscreen
     delay(500);
-    display.clearDisplay();   // clears the screen and buffer
+    display->clearDisplay();   // clears the screen and buffer
 
     // Time.zone(+2);
     Time.zone(+1);
@@ -122,28 +125,23 @@ void loop() {
 
     // Load weather data
     if ((lastWeatherUpdate + WEATHER_UPDATE_INTERVAL) < Time.now()) {
-        Particle.publish("weather", String(weatherModel.getCityId()), PRIVATE);
+        Particle.publish("weather", String(weatherModel->getCityId()), PRIVATE);
         lastWeatherUpdate = Time.now();
     }
 
-    display.clearDisplay();   // clears the screen and buffer
+    display->clearDisplay();   // clears the screen and buffer
 
     updateLoginLED();
     updateLogoutLED();
 
     printPageNumber();
     if (page == 0) {
-      printTime();
-      printWifiState();
-      printWorkStarted();
-      printWorkDuration();
-      printExitTime();
-      printTemperature();
+      pageOne->updateDisplay();
     } else if (page == 1) {
       printPage2();
     }
 
-    display.display();
+    display->display();
 }
 
 void checkButtonState() {
@@ -161,7 +159,7 @@ void performLoginButton() {
   if(function == 1) {
   Serial.println("Login button clicked.");
     if (mode == 0) {
-      dataModel.login();
+      dataModel->login();
     }
   }
 }
@@ -175,7 +173,7 @@ void performLogoutButton() {
   if(function == 1) {
     Serial.println("Logout button clicked.");
     if (mode == 0) {
-      dataModel.logout();
+      dataModel->logout();
     }
   }
 }
@@ -210,163 +208,30 @@ void performModeButton() {
 }
 
 void updateLoginLED() {
-    digitalWrite(LED_LOGIN, !dataModel.atWork());
+    digitalWrite(LED_LOGIN, !dataModel->atWork());
 }
 
 void updateLogoutLED() {
-    digitalWrite(LED_LOGOUT, dataModel.atWork());
+    digitalWrite(LED_LOGOUT, dataModel->atWork());
 }
 
 void printPageNumber() {
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setTextWrap(false);
-    display.setCursor(60,56);
+    display->setTextSize(1);
+    display->setTextColor(WHITE);
+    display->setTextWrap(false);
+    display->setCursor(60,56);
 
-    display.print(page + 1);
+    display->print(page + 1);
 }
 
 void printPage2() {
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setTextWrap(true);
-  display.setCursor(0,10);
+  display->setTextSize(2);
+  display->setTextColor(WHITE);
+  display->setTextWrap(true);
+  display->setCursor(0,10);
 
-  display.println(" COMING");
-  display.print("    SOON");
-}
-
-void printWorkStarted() {
-    display.drawBitmap(0, 0, loginIcon, 8, 8, WHITE);
-
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setTextWrap(false);
-
-    display.setCursor(10,0);
-
-    // Not initialized
-    if (dataModel.getLoginTimeSec() == 0
-          && dataModel.getLogoutTimeSec() == 0) {
-        display.print("--:--");
-        return;
-    }
-
-    if (!dataModel.atWork()) {
-        display.print("--:--");
-    } else {
-        display.print(Time.format(dataModel.getLoginTimeSec(), "%H:%M"));
-    }
-}
-
-void printTime() {
-    display.drawBitmap(88, 0, clockIcon, 8, 8, WHITE);
-
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setTextWrap(false);
-
-    display.setCursor(98,0);
-
-    if (Time.now() % 2 == 0) {
-        display.print(Time.format(Time.now(), "%H:%M"));
-    } else {
-        display.print(Time.format(Time.now(), "%H %M"));
-    }
-}
-
-void printWifiState() {
-    if (!WiFi.ready()) {
-        display.drawBitmap(60, 0, noWifiIcon, 8, 8, WHITE);
-        return;
-    }
-
-    // Signal strength
-    int sig = WiFi.RSSI();
-    if (sig < -95) {
-        // Bad signal
-        display.drawBitmap(60, 0, wifiIcon1, 8, 8, WHITE);
-    } else if (-95 <= sig && sig < -63) {
-        display.drawBitmap(60, 0, wifiIcon2, 8, 8, WHITE);
-    } else if (-63 <= sig && sig < -31) {
-        display.drawBitmap(60, 0, wifiIcon3, 8, 8, WHITE);
-    } else if (-31 <= sig && sig < 0) {
-        // Good signal
-        display.drawBitmap(60, 0, wifiIcon4, 8, 8, WHITE);
-    } else if (sig > 0) {
-        // Error
-        display.drawBitmap(60, 0, noWifiIcon, 8, 8, WHITE);
-    }
-}
-
-void printWorkDuration() {
-    display.drawBitmap(0, 20, lampIcon24, 24, 24, WHITE);
-
-    display.setTextSize(3);
-    display.setTextColor(WHITE);
-    display.setTextWrap(false);
-
-    display.setCursor(30,23);
-
-    // Not initialized
-    if (dataModel.getLoginTimeSec() == 0
-          && dataModel.getLogoutTimeSec() == 0) {
-        display.print("--:--");
-        return;
-    }
-
-    if (!dataModel.atWork()) {
-        display.print("--:--");
-    } else {
-        int timeDiff = dataModel.getAtWorkTimeSec();
-        int minutes = timeDiff / 60;
-
-        // Hours
-        display.print(String::format("%02d", minutes / 60));
-
-        if (Time.now() % 2 == 0) {
-            display.print(":");
-        } else {
-            display.print(" ");
-        }
-
-        // Minutes
-        display.print(String::format("%02d", minutes % 60));
-    }
-}
-
-void printExitTime() {
-    display.drawBitmap(0, 56, logoutIcon, 8, 8, WHITE);
-
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setTextWrap(false);
-
-    display.setCursor(10, 56);
-
-    if (dataModel.getLogoutTimeSec() == 0) {
-        display.print("--:--");
-    } else {
-        display.print(Time.format(dataModel.getLogoutTimeSec(), "%H:%M"));
-    }
-}
-
-void printTemperature() {
-    display.drawBitmap(88, 56, tempIcon, 8, 8, WHITE);
-
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    display.setTextWrap(false);
-
-    display.setCursor(98, 56);
-
-    if (lastWeatherUpdate == 0) {
-        display.print("-.-");
-    } else {
-        // display.print(String::format("%+5.1f", tempHRO));
-        display.print(String::format("%+3d%cC", weatherModel.getCurrentTemp(), char(247)));
-        //display.print(tempHRO);
-    }
+  display->println(" COMING");
+  display->print("    SOON");
 }
 
 /*
