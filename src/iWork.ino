@@ -35,6 +35,7 @@ Adafruit_SSD1306* display = new Adafruit_SSD1306(OLED_MOSI, OLED_CLK, OLED_DC, O
 #define ENTER_ADDR 0
 #define EXIT_ADDR 4
 #define OWM_CITY_ADDR 8
+#define TIME_ZONE_ADDR 12
 
 ClickButton loginButton(BTN_LOGIN, LOW, CLICKBTN_PULLUP);
 ClickButton logoutButton(BTN_LOGOUT, LOW, CLICKBTN_PULLUP);
@@ -76,9 +77,17 @@ void receiveWeather(const char *event, const char *data) {
 }
 
 int updateWeatherCityId(String data) {
-  weatherModel->setCityId(atoi(data));
+  int cityId = atoi(data);
+  weatherModel->setCityId(cityId);
   Particle.publish("weather", String(weatherModel->getCityId()), PRIVATE);
-  return 0;
+  return cityId;
+}
+
+int updateTimeZone(String data) {
+  int tz = atoi(data);
+  Time.zone(tz);
+  EEPROM.put(TIME_ZONE_ADDR, tz);
+  return tz;
 }
 
 int mode = 0;
@@ -100,12 +109,19 @@ void setup()   {
     delay(500);
     display->clearDisplay();   // clears the screen and buffer
 
-    // Time.zone(+2);
-    Time.zone(+1);
+    int timeZone;
+    EEPROM.get(TIME_ZONE_ADDR, timeZone);
+    if (-12 <= timeZone && timeZone <= 12) {
+      Time.zone(timeZone);
+    } else {
+      Time.zone(1);
+      EEPROM.put(TIME_ZONE_ADDR, 1);
+    }
 
     Particle.subscribe("on_work", onWorkHandler);
     Particle.subscribe("hook-response/weather/", receiveWeather, MY_DEVICES);
     Particle.function("owmCityId", updateWeatherCityId);
+    Particle.function("timeZone", updateTimeZone);
 
     pinMode(LED_LOGIN, OUTPUT);
     pinMode(LED_LOGOUT, OUTPUT);
