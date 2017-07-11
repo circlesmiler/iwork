@@ -36,6 +36,10 @@ currently not logged in. The LED turns of, when the user pressed the
 *Login Button*. The *Logout Button* only glows RED, when the user is currently
 logged in. Very easy, isn't it? ;-)
 
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=zKBNXiXqFS4" target="_blank">
+<img src="http://img.youtube.com/vi/zKBNXiXqFS4/0.jpg" alt="iWork at work" width="240" height="180" border="10" />
+</a>
+
 ## Weather Configuration (City ID)
 The temperature shown on the display is provided by the OpenWeather API. To
 get the temperature value of your city, you can call the Particle function
