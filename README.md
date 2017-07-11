@@ -4,31 +4,31 @@ and a login and logout button to recognize the start work time end the end
 of work.
 
 On the display, you can see following informations:
- * Start of Work (hh:mm)
- * End of Work (hh:mm)
- * Time at Work (hh:mm)
- * Current Time (hh:mm)
- * WIFI strength (as Image)
- * Outside Temperature (OpenWeather API)
+* Start of Work (hh:mm)
+* End of Work (hh:mm)
+* Time at Work (hh:mm)
+* Current Time (hh:mm)
+* WIFI strength (as Image)
+* Outside Temperature (OpenWeather API)
 
 ![alt tag](https://raw.githubusercontent.com/circlesmiler/iwork/master/iWork-fritzing.png)
 
 ## Login and Logout
 It's possible to login and logout due to
- * Pressing the login or logout button
+* Pressing the login or logout button
   * Publishes an Event _work_state_ with folling data:
-   * Start|||01.01.2017 07:00
-   * Ende|||01.01.2017 17:00
- * Using the IFTTT Location
+    * Start|||01.01.2017 07:00
+    * Ende|||01.01.2017 17:00
+* Using the IFTTT Location
   * Trigger: Mobile Phone Location (IFTTT app needed on the phone)
   * Action: Particle Publish Event
-   * Event == "on_work"
-   * Data == %EnteredOrExited%
- * Using the IFTTT button widget (on phone)
+    * Event == "on_work"
+    * Data == %EnteredOrExited%
+* Using the IFTTT button widget (on phone)
   * Trigger: Button widget
   * Action: Particle Publish Event
-   * Event == "on_work"
-   * Data == "entered" or "exited"
+    * Event == "on_work"
+    * Data == "entered" or "exited"
 
 For a better usability, I used buttons with integrated LEDs, that can be
 controlled separately. So, the *Login Button* glows GREEN, when the user is
