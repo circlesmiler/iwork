@@ -10,6 +10,10 @@
 #include "PageOne.h"
 #include "PageTwo.h"
 
+// TIME SYNC CONSTANT
+#define ONE_DAY_MILLIS (24 * 60 * 60 * 1000)
+unsigned long lastTimeSync = 0;
+
 //PIN PHOTON => PIN OLED
 #define OLED_MOSI   D0 //=>D1
 #define OLED_CLK    D1 //=>D0
@@ -59,12 +63,10 @@ PageTwo* pageTwo = new PageTwo(display, dataModel, weatherModel);
 #define WEATHER_UPDATE_INTERVAL 3600 // 3600sec = 1h
 int lastWeatherUpdate = 0;
 
-// For debugging
-String dataStr;
-
 // IFTTT EVENT HANDLER
 void onWorkHandler(const char *event, const char *data) {
-    dataStr = String(data).trim().toLowerCase();
+  Serial.printlnf("Event '%s' : '%s'", event, data);
+    String dataStr = String(data).trim().toLowerCase();
     if (dataStr.equals("entered")) {
         dataModel->login();
     } else if (dataStr.equals("exited")) {
@@ -72,10 +74,18 @@ void onWorkHandler(const char *event, const char *data) {
     }
 }
 
+/*
+ * Called on Partice event "hook-response/weather/".
+ */
 void receiveWeather(const char *event, const char *data) {
+  Serial.printlnf("Event '%s' : '%s'", event, data);
   weatherModel->update(data);
 }
 
+/*
+ * Particle function for updating the OpenWeather city id.
+ * @see http://openweathermap.org/help/city_list.txt
+ */
 int updateWeatherCityId(String data) {
   int cityId = atoi(data);
   weatherModel->setCityId(cityId);
@@ -83,50 +93,65 @@ int updateWeatherCityId(String data) {
   return cityId;
 }
 
+/*
+ * Particle function for updating the time zone.
+ */
 int updateTimeZone(String data) {
   int tz = atoi(data);
-  Time.zone(tz);
+  setTimeZone(tz);
   EEPROM.put(TIME_ZONE_ADDR, tz);
   return tz;
 }
 
 int mode = 0;
 
-// STARTUP(WiFi.selectAntenna(ANT_AUTO));
-STARTUP(WiFi.selectAntenna(ANT_INTERNAL));
+STARTUP(WiFi.selectAntenna(ANT_AUTO));
+// Use SYSTEM_THREAD(ENABLED) for non-blocking WiFi
+SYSTEM_THREAD(ENABLED);
+// Use SYSTEM_MODE(SEMI_AUTOMATIC) for accessing setup method immediatly
+// without wainting for Particle cloud.
+SYSTEM_MODE(SEMI_AUTOMATIC);
 
-// SETUP
+/*
+ * Setup serial via USB (for debugging), display, timezone, buttons,
+ * Particle subscriptions and functions and connect to Particle cloud.
+ */
 void setup()   {
     Serial.begin(9600);
 
-    // Rotate display 180° (because it's build in in the other direction)
-    display->setRotation(2);
+    // Init display
     // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
     display->begin(SSD1306_SWITCHCAPVCC);
-    // init done
-
-    display->display(); // show splashscreen
+    // Rotate display 180° (because it's build in in the other direction)
+    display->setRotation(2);
+    display->clearDisplay();
+    display->drawBitmap(39, 7, drehpunktIcon, 48, 48, WHITE);
+    display->display();
     delay(500);
     display->clearDisplay();   // clears the screen and buffer
 
+    // Init timezone from EEPROM
     int timeZone;
     EEPROM.get(TIME_ZONE_ADDR, timeZone);
     if (-12 <= timeZone && timeZone <= 12) {
-      Time.zone(timeZone);
+      setTimeZone(timeZone);
     } else {
-      Time.zone(1);
+      setTimeZone(1);
       EEPROM.put(TIME_ZONE_ADDR, 1);
     }
 
+    // Init buttons
+    pinMode(LED_LOGIN, OUTPUT);
+    pinMode(LED_LOGOUT, OUTPUT);
+    pinMode(LED_MODE, OUTPUT);
+
+    // Init Particle subscriptions and functions
     Particle.subscribe("on_work", onWorkHandler);
     Particle.subscribe("hook-response/weather/", receiveWeather, MY_DEVICES);
     Particle.function("owmCityId", updateWeatherCityId);
     Particle.function("timeZone", updateTimeZone);
 
-    pinMode(LED_LOGIN, OUTPUT);
-    pinMode(LED_LOGOUT, OUTPUT);
-    pinMode(LED_MODE, OUTPUT);
-
+    // Initial blinking stuff to indicate setup is complete
     digitalWrite(LED_LOGIN, HIGH);
     delay(200);
     digitalWrite(LED_LOGIN, LOW);
@@ -136,6 +161,9 @@ void setup()   {
     digitalWrite(LED_LOGOUT, LOW);
 
     digitalWrite(LED_MODE, HIGH);
+
+    // Connect to Particle cloud
+    Particle.connect();
 }
 
 int page = 0;
@@ -144,12 +172,28 @@ void loop() {
     checkButtonState();
 
     // Load weather data
-    if ((lastWeatherUpdate + WEATHER_UPDATE_INTERVAL) < Time.now()) {
-        Particle.publish("weather", String(weatherModel->getCityId()), PRIVATE);
-        lastWeatherUpdate = Time.now();
+    if (Particle.connected() && (lastWeatherUpdate + WEATHER_UPDATE_INTERVAL) < Time.now()) {
+        bool success = Particle.publish("weather", String(weatherModel->getCityId()), PRIVATE);
+        if (success) {
+          lastWeatherUpdate = Time.now();
+          Serial.println("Weather Event published.");
+        }
     }
 
     display->clearDisplay();   // clears the screen and buffer
+
+    if (!Time.isValid()) {
+      Serial.println("Time is not synchronized!");
+
+      display->setTextSize(1);
+      display->setTextColor(WHITE);
+      display->setTextWrap(false);
+      display->setCursor(10,0);
+      display->print("Time invalid...");
+      display->display();
+      waitFor(Time.isValid, 60000);
+      return;
+    }
 
     updateLoginLED();
     updateLogoutLED();
@@ -253,4 +297,9 @@ void toggleModeLED() {
 
 void setModeLED(bool isOn) {
     digitalWrite(LED_MODE, isOn);
+}
+
+void setTimeZone(int timeZone) {
+  Serial.printlnf("Time zone set to %i", timeZone);
+  Time.zone(timeZone);
 }

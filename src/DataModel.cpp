@@ -16,7 +16,9 @@ void DataModel::login() {
 void DataModel::login(int loginTimeSec) {
   if (loginTimeSec > 1483228800 && loginTimeSec < 4102444800) {
       loginTimeSec_ = loginTimeSec;
-      Particle.publish("work_state", "Start|||" + Time.format(loginTimeSec_, "%d.%m.%Y %H:%M"));
+      if (Particle.connected()) {
+        Particle.publish("work_state", "Start|||" + Time.format(loginTimeSec_, "%d.%m.%Y %H:%M"));
+      }
       EEPROM.put(loginEEPROMAddress_, loginTimeSec_);
   }
 }
@@ -30,7 +32,9 @@ void DataModel::logout() {
 void DataModel::logout(int logoutTimeSec) {
   if (logoutTimeSec > 1483228800 && logoutTimeSec < 4102444800) {
       logoutTimeSec_ = logoutTimeSec;
-      Particle.publish("work_state", "Ende|||" + Time.format(logoutTimeSec_, "%d.%m.%Y %H:%M"));
+      if (Particle.connected()) {
+        Particle.publish("work_state", "Ende|||" + Time.format(logoutTimeSec_, "%d.%m.%Y %H:%M"));
+      }
       EEPROM.put(logoutEEPROMAddress_, logoutTimeSec_);
   }
 }
