@@ -8,7 +8,7 @@ WeatherModel::WeatherModel(int owmCityIdEEPROMAddress) {
   currentTemp_ = 0;
 }
 
-void WeatherModel::update(const char *data) {
+void WeatherModel::setOutdoorData(const char *data) {
   currentTemp_ = atof(data);
 }
 
@@ -32,4 +32,17 @@ int WeatherModel::loadCityIdFromEEPROM() {
       return cityId;
     else
       return 2844588;
+}
+
+void WeatherModel::setIndoorValues(float temperature, float humidity) {
+  indoorTemperature_ = temperature;
+  indoorHumidity_ = humidity;
+}
+
+float WeatherModel::getIndoorTemperature() {
+  return indoorTemperature_;
+}
+
+float WeatherModel::getIndoorHumidity() {
+  return indoorHumidity_;
 }

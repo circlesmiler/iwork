@@ -10,6 +10,6 @@ void PageTwo::updateDisplay() {
   display->setTextWrap(true);
   display->setCursor(0,10);
 
-  display->println(" COMING");
-  display->print("    SOON");
+  display->println(String::format("T: %3.1f%cC", weatherModel->getIndoorTemperature(), char(247)));
+  display->print(String::format("H: %3.1f%%", weatherModel->getIndoorHumidity()));
 }

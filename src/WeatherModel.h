@@ -4,16 +4,22 @@
 class WeatherModel {
   public:
     WeatherModel(int owmCityIdEEPROMAddress);
-    void update(const char *data);
+    void setOutdoorData(const char *data);
 
     int getCityId();
     void setCityId(int cityId);
 
     int getCurrentTemp();
 
+    void setIndoorValues(float temperature, float humidity);
+    float getIndoorTemperature();
+    float getIndoorHumidity();
   private:
     int currentTemp_;
     int cityId_;
+
+    float indoorTemperature_;
+    float indoorHumidity_;
 
     int owmCityIdEEPROMAddress_;
 

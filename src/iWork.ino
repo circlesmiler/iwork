@@ -3,12 +3,23 @@
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <PietteTech_DHT.h>
 
 #include "DataModel.h"
 #include "WeatherModel.h"
 #include "Icons.h"
 #include "PageOne.h"
 #include "PageTwo.h"
+
+// DHT22
+#define DHTTYPE  DHT22              // Sensor type DHT11/21/22/AM2301/AM2302
+#define DHTPIN   A7         	    // Digital pin for communications
+#define DHT_SAMPLE_INTERVAL   10000  // Sample every minute
+// Needed for DHT22 library
+void dht_wrapper();
+// Lib instantiate
+PietteTech_DHT DHT(DHTPIN, DHTTYPE, dht_wrapper);
+volatile bool bMeasureAirFlag = true;		    // flag to indicate we started acquisition
 
 // TIME SYNC CONSTANT
 #define ONE_DAY_MILLIS (24 * 60 * 60 * 1000)
@@ -51,7 +62,7 @@ void blinkModeLED()
     toggleModeLED();
 }
 
-Timer blinkModeLEDtimer(1000, blinkModeLED);
+Timer blinkModeLEDTimer(1000, blinkModeLED);
 
 // VARIABLES
 DataModel* dataModel = new DataModel(ENTER_ADDR, EXIT_ADDR);
@@ -79,7 +90,7 @@ void onWorkHandler(const char *event, const char *data) {
  */
 void receiveWeather(const char *event, const char *data) {
   Serial.printlnf("Event '%s' : '%s'", event, data);
-  weatherModel->update(data);
+  weatherModel->setOutdoorData(data);
 }
 
 /*
@@ -103,6 +114,11 @@ int updateTimeZone(String data) {
   return tz;
 }
 
+void callAirReading() {
+  bMeasureAirFlag = true;
+}
+Timer airMeasureTimer(DHT_SAMPLE_INTERVAL, callAirReading);
+
 int mode = 0;
 
 STARTUP(WiFi.selectAntenna(ANT_AUTO));
@@ -118,6 +134,9 @@ SYSTEM_MODE(SEMI_AUTOMATIC);
  */
 void setup()   {
     Serial.begin(9600);
+
+    // Use for debugging over serial USB
+    // while(!Serial.isConnected());
 
     // Init display
     // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
@@ -164,12 +183,15 @@ void setup()   {
 
     // Connect to Particle cloud
     Particle.connect();
+
+    airMeasureTimer.start();
 }
 
 int page = 0;
 // PAINT STUFF IN LOOP
 void loop() {
     checkButtonState();
+    readAir();
 
     // Load weather data
     if (Particle.connected() && (lastWeatherUpdate + WEATHER_UPDATE_INTERVAL) < Time.now()) {
@@ -261,11 +283,11 @@ void performModeButton() {
       if (mode == 0) {
           Serial.println("Edit Mode");
           mode = 1;
-          blinkModeLEDtimer.start();
+          blinkModeLEDTimer.start();
       } else if (mode == 1) {
           Serial.println("Normal Mode");
           mode = 0;
-          blinkModeLEDtimer.stop();
+          blinkModeLEDTimer.stop();
           setModeLED(true);
       }
   }
@@ -302,4 +324,61 @@ void setModeLED(bool isOn) {
 void setTimeZone(int timeZone) {
   Serial.printlnf("Time zone set to %i", timeZone);
   Time.zone(timeZone);
+}
+
+/*
+ * Reading AIR values.
+ */
+void readAir() {
+  if (bMeasureAirFlag) {		// start the sample
+      Serial.println("Retrieving information from sensor...");
+      DHT.acquire();
+      bMeasureAirFlag = false;
+  }
+
+	if (!DHT.acquiring()) {		// has sample completed?
+	    // get DHT status
+	    int result = DHT.getStatus();
+
+	    Serial.print("Read sensor: ");
+	    switch (result) {
+    		case DHTLIB_OK:
+    		    Serial.println("OK");
+            weatherModel->setIndoorValues(DHT.getCelsius(), DHT.getHumidity());
+            Serial.printlnf("Temp: %f; Humidity: %f", DHT.getCelsius(), DHT.getHumidity());
+    		    break;
+    		case DHTLIB_ERROR_CHECKSUM:
+    		    Serial.println("Error\n\r\tChecksum error");
+    		    break;
+    		case DHTLIB_ERROR_ISR_TIMEOUT:
+    		    Serial.println("Error\n\r\tISR time out error");
+    		    break;
+    		case DHTLIB_ERROR_RESPONSE_TIMEOUT:
+    		    Serial.println("Error\n\r\tResponse time out error");
+    		    break;
+    		case DHTLIB_ERROR_DATA_TIMEOUT:
+    		    Serial.println("Error\n\r\tData time out error");
+    		    break;
+    		case DHTLIB_ERROR_ACQUIRING:
+    		    Serial.println("Error\n\r\tAcquiring");
+    		    break;
+    		case DHTLIB_ERROR_DELTA:
+    		    Serial.println("Error\n\r\tDelta time to small");
+    		    break;
+    		case DHTLIB_ERROR_NOTSTARTED:
+    		    Serial.println("Error\n\r\tNot started");
+    		    break;
+    		default:
+    		    Serial.println("Unknown error");
+    		    break;
+	    }
+	}
+}
+
+/*
+* This wrapper is in charge of calling
+* must be defined like this for the lib work
+*/
+void dht_wrapper() {
+  DHT.isrCallback();
 }
