@@ -5,11 +5,11 @@
 WeatherModel::WeatherModel(int owmCityIdEEPROMAddress) {
   owmCityIdEEPROMAddress_ = owmCityIdEEPROMAddress;
   setCityId(loadCityIdFromEEPROM());
-  currentTemp_ = 0;
+  outdoorTemp_ = 0;
 }
 
 void WeatherModel::setOutdoorData(const char *data) {
-  currentTemp_ = atof(data);
+  outdoorTemp_ = atof(data);
 }
 
 int WeatherModel::getCityId() {
@@ -21,8 +21,8 @@ void WeatherModel::setCityId(int cityId) {
   EEPROM.put(owmCityIdEEPROMAddress_, cityId_);
 }
 
-int WeatherModel::getCurrentTemp() {
-  return currentTemp_;
+int WeatherModel::getOutdoorTemp() {
+  return outdoorTemp_;
 }
 
 int WeatherModel::loadCityIdFromEEPROM() {

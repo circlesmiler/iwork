@@ -9,13 +9,13 @@ class WeatherModel {
     int getCityId();
     void setCityId(int cityId);
 
-    int getCurrentTemp();
+    int getOutdoorTemp();
 
     void setIndoorValues(float temperature, float humidity);
     float getIndoorTemperature();
     float getIndoorHumidity();
   private:
-    int currentTemp_;
+    int outdoorTemp_;
     int cityId_;
 
     float indoorTemperature_;

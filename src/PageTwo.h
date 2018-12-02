@@ -21,5 +21,12 @@ class PageTwo {
     Adafruit_SSD1306* display;
     DataModel* dataModel;
     WeatherModel* weatherModel;
+
+    void printWorkStarted();
+    void printTime();
+    void printWifiState();
+    void printWorkDuration();
+    void printExitTime();
+    void printTemperature();
 };
 #endif /* PAGE_TWO_H */

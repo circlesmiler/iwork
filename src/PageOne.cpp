@@ -137,5 +137,5 @@ void PageOne::printTemperature() {
 
   display->setCursor(98, 56);
 
-  display->print(String::format("%+3d%cC", weatherModel->getCurrentTemp(), char(247)));
+  display->print(String::format("%+3d%cC", weatherModel->getOutdoorTemp(), char(247)));
 }
