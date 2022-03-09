@@ -3,6 +3,8 @@ This is a Particle Photon project. The idea is to provide a simple display
 and a login and logout button to recognize the start work time end the end
 of work.
 
+![Wirfeframe Mock Up](https://raw.githubusercontent.com/circlesmiler/iwork/master/iWork_Display_Wireframe.png)
+
 On the display, you can see following informations:
 * Start of Work (hh:mm)
 * End of Work (hh:mm)
